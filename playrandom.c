@@ -264,14 +264,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (argc < 2) {
-        walkdir(".", 1, storage);
-    } else {
-        for (i=1; i<argc; ++i)
-            walkdir(argv[i], 1, storage);
-    }
-
-    /* report(); */
     if (sysrand) {
         unsigned int rval;
         if (fread(&rval, sizeof(rval), 1, sysrand) == 1)
@@ -282,6 +274,15 @@ int main(int argc, char **argv)
     } else {
         srand(time(NULL));
     }
+
+    if (argc < 2) {
+        walkdir(".", 1, storage);
+    } else {
+        for (i=1; i<argc; ++i)
+            walkdir(argv[i], 1, storage);
+    }
+
+    /* report(); */
 
     storage_shuffle(storage);
     for (i=0; i<storage->size; ++i)
