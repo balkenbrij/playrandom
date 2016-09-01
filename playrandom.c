@@ -17,8 +17,8 @@ static const char *player = "mpv";
 
 /* and the extensions you want to play */
 static const char *extensions[] = {
-    ".avi", ".flv", ".m4v", ".mkv", ".mp4", ".mpg", ".mpeg",
-    ".sfv", ".wmv"
+    ".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
+    ".mpeg", ".flv", ".sfv"
 };
 
 /* 
@@ -109,7 +109,7 @@ static void storage_shuffle(struct storage *s)
     char *tmp;
 
     for (i=0; i<s->size; ++i) {
-        r = rand() % s->size;
+        do { r = rand() % s->size; } while (r == i);
         tmp = s->data[i];
         s->data[i] = s->data[r];
         s->data[r] = tmp;
@@ -199,6 +199,8 @@ static void playfile(const char *file)
     case 0:
         printf("Playing '%s'\n", file);
         fclose(stdout);
+        fclose(stderr);
+        /* keep open stdin for control */
         execlp(player, player_args, file, (char*)NULL);
     default:
         wait(&status);
