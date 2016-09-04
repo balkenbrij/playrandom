@@ -77,7 +77,7 @@ storage_new (void)
     }
 
   s->size = 0;
-  s->capacity = 16;
+  s->capacity = STORAGE_SIZE;
 
   return s;
 }
@@ -325,10 +325,8 @@ main (int argc, char **argv)
   if (argc < 2)
     walkdir (".", 1, storage);
   else
-    {
       for (i = 1; i < argc; ++i)
         walkdir (argv[i], 1, storage);
-    }
 
   /* report(); */
 
