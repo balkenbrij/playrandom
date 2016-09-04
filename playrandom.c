@@ -89,8 +89,6 @@ storage_new (void)
 static int
 storage_add (struct storage *s, const char *string)
 {
-  int newsize = s->size + 1;
-
   if (s == NULL || string == NULL)
     return -1;
 
@@ -118,7 +116,7 @@ storage_add (struct storage *s, const char *string)
     return -1;
 
   strcpy (s->data[s->size], string);
-  s->size = newsize;
+  ++s->size;
 
   return 0;
 }
@@ -200,22 +198,6 @@ in_extensions (const char *name)
   return 0;
 }
 
-#if 0
-static void
-report (void)
-{
-  int i;
-  unsigned long int s = sizeof (struct storage) +
-    sizeof (char *) * storage->capacity;
-
-  for (i = 0; i < storage->size; ++i)
-    s += strlen (storage->data[i]) + 1;
-
-  printf ("%10lu bytes in use for %d items\n",
-          sizeof (storage) + s, storage->size);
-  printf ("storage capacity: %d\n", storage->capacity);
-}
-#endif
 
 /*
  * Play a file by forking and execlp the player. Execlp searches
@@ -304,7 +286,7 @@ main (int argc, char **argv)
 
   if (storage == NULL)
     {
-      fprintf (stderr, "can't allocate storage\n");
+      fprintf (stderr, "can't allocate storage memory\n");
       return 1;
     }
 
@@ -325,8 +307,6 @@ main (int argc, char **argv)
   else
     for (i = 1; i < argc; ++i)
       walkdir (argv[i], 1, storage);
-
-  /* report(); */
 
   storage_shuffle (storage);
   for (i = 0; i < storage->size; ++i)
