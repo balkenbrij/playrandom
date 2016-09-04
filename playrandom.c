@@ -214,7 +214,7 @@ playfile (const char * const file)
   switch (pid)
     {
     case -1:
-      fprintf (stderr, "can't fork\n");
+      perror("can't fork");
       exit (1);
     case 0:
       printf ("Playing '%s'\n", file);
