@@ -13,25 +13,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <ctype.h>
-#include <limits.h>
 
+#include <dirent.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <dirent.h>
 #include <unistd.h>
 
 /* Define media player and it's arguments */
-static const char *player = "mpv";
-#define            player_args "-really-quiet", "-fs"
+static const char * const player = "mpv";
+#define player_args "-really-quiet", "-fs"
 
 /* and the extensions you want to play */
-static const char *extensions[] = {
+static const char * const extensions[] = {
   ".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
   ".mpeg", ".flv", ".sfv"
 };
@@ -167,7 +168,7 @@ storage_free (struct storage *s)
  * case.
  */
 static int
-string_endswidth_ic (const char *str, const char *pat)
+string_endswidth_ic (const char * const str, const char * const pat)
 {
   int slen = strlen (str), plen = strlen (pat), si, pi;
 
@@ -186,7 +187,7 @@ string_endswidth_ic (const char *str, const char *pat)
  * extensions array.
  */
 static int
-in_extensions (const char *name)
+in_extensions (const char * const name)
 {
   int i;
   const int extslen = sizeof (extensions) / sizeof (extensions[0]);
@@ -205,7 +206,7 @@ in_extensions (const char *name)
  * with the player.
  */
 static void
-playfile (const char *file)
+playfile (const char * const file)
 {
   int status;
   pid_t pid = fork ();
@@ -237,7 +238,7 @@ playfile (const char *file)
  * adding files to storage for each playable file.
  */
 static int
-walkdir (char *path, int recurse, struct storage *storage)
+walkdir (const char * const path, int recurse, struct storage *storage)
 {
   struct dirent *de;
 #ifdef USE_STAT
