@@ -11,7 +11,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -287,10 +287,8 @@ walkdir (char *path, int recurse, struct storage *storage)
 #endif
 
       if (in_extensions (fullname))
-        {
-          if (storage_add (storage, fullname) != 0)
-            return -1;
-        }
+        if (storage_add (storage, fullname) != 0)
+          return -1;
     }
 
   closedir (dir);
@@ -325,8 +323,8 @@ main (int argc, char **argv)
   if (argc < 2)
     walkdir (".", 1, storage);
   else
-      for (i = 1; i < argc; ++i)
-        walkdir (argv[i], 1, storage);
+    for (i = 1; i < argc; ++i)
+      walkdir (argv[i], 1, storage);
 
   /* report(); */
 
