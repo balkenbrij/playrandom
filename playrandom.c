@@ -1,3 +1,18 @@
+/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,11 +32,14 @@ static const char *player = "mpv";
 
 /* and the extensions you want to play */
 static const char *extensions[] = {
-    ".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
-    ".mpeg", ".flv", ".sfv"
+  ".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
+  ".mpeg", ".flv", ".sfv"
 };
 
-/* 
+/* The initial storage size */
+#define STORAGE_SIZE 32
+
+/*
  * for random seed, if it can't be used the current time
  * is used.
  */
@@ -34,85 +52,97 @@ static const char *extensions[] = {
  * When we run out of room we realloc 2*capacity more room for
  * performance.
  */
-struct storage {
-    int    size, capacity;
-    char **data;
+struct storage
+{
+  int size, capacity;
+  char **data;
 };
 
 /*
- * Initialize storage with room for 16 elements.
+ * Initialize storage.
  */
-static struct storage *storage_new(void)
+static struct storage *
+storage_new (void)
 {
-    struct storage *s = malloc(sizeof(struct storage));
+  struct storage *s = malloc (sizeof (struct storage));
 
-    if (s == NULL)
-        return NULL;
+  if (s == NULL)
+    return NULL;
 
-    s->data = malloc(sizeof(char*) * 16);
-    if (s->data == NULL) {
-        free(s);
-        return NULL;
+  s->data = malloc (sizeof (char *) * STORAGE_SIZE);
+  if (s->data == NULL)
+    {
+      free (s);
+      return NULL;
     }
 
-    s->size = 0;
-    s->capacity = 16;
+  s->size = 0;
+  s->capacity = 16;
 
-    return s;
+  return s;
 }
 
 /*
  * Adds a string to storage and if it doesn't fit allocates
  * more memory.
  */
-static int storage_add(struct storage *s, const char *string)
+static int
+storage_add (struct storage *s, const char *string)
 {
-    int newsize = s->size + 1;
+  int newsize = s->size + 1;
 
-    if (s == NULL || string == NULL)
+  if (s == NULL || string == NULL)
+    return -1;
+
+  /* If we're at capacity increase it by doubling it */
+  if (s->size == s->capacity)
+    {
+      int newcap = s->capacity << 1;
+      char **tmpdata;
+
+      if (newcap < s->capacity)
         return -1;
 
-    /* If we're at capacity increase it by doubling it */
-    if (s->size == s->capacity) {
-        int    newcap = s->capacity << 1;
-        char **tmpdata;
+      tmpdata = realloc (s->data, sizeof (char *) * newcap);
 
-        if (newcap < s->capacity)
-            return -1;
+      if (tmpdata == NULL)
+        return -1;
 
-        tmpdata = realloc(s->data, sizeof(char*) * newcap);
-
-        if (tmpdata == NULL)
-            return -1;
-
-        s->data = tmpdata;
-        s->capacity = newcap;
+      s->data = tmpdata;
+      s->capacity = newcap;
     }
 
-    /* add the string */
-    s->data[s->size] = malloc(strlen(string)+1);
-    if (s->data[s->size] == NULL)
-        return -1;
+  /* add the string */
+  s->data[s->size] = malloc (strlen (string) + 1);
+  if (s->data[s->size] == NULL)
+    return -1;
 
-    strcpy(s->data[s->size], string);
-    s->size = newsize;
+  strcpy (s->data[s->size], string);
+  s->size = newsize;
 
-    return 0;
+  return 0;
 }
 
 /*
  * Shuffle the storage
  */
-static void storage_shuffle(struct storage *s)
+static void
+storage_shuffle (struct storage *s)
 {
-    int   i, r;
-    char *tmp;
+  int i, r;
+  char *tmp;
 
-    for (i=0; i<s->size; ++i) {
-        do { r = rand() % s->size; } while (r == i);
-        tmp = s->data[i];
-        s->data[i] = s->data[r];
-        s->data[r] = tmp;
+  for (i = 0; i < s->size; ++i)
+    {
+      do
+        {
+          r = rand () % s->size;
+        }
+      while (r == i);
+
+      tmp = s->data[i];
+      s->data[i] = s->data[r];
+      s->data[r] = tmp;
     }
 }
 
@@ -122,63 +152,68 @@ static void storage_shuffle(struct storage *s)
  * - the memory for holding all string pointers and
  * - the storage struct itself.
  */
-static void storage_free(struct storage *s)
+static void
+storage_free (struct storage *s)
 {
-    int i;
+  int i;
 
-    for (i=0; i<s->size; ++i)
-        free(s->data[i]);
+  for (i = 0; i < s->size; ++i)
+    free (s->data[i]);
 
-    free(s->data);
-    free(s);
+  free (s->data);
+  free (s);
 }
 
 /*
  * See if string str ends with pattern pat ignoring
  * case.
  */
-static int string_endswidth_ic(const char *str, const char *pat)
+static int
+string_endswidth_ic (const char *str, const char *pat)
 {
-    int slen = strlen(str), plen = strlen(pat), si, pi;
+  int slen = strlen (str), plen = strlen (pat), si, pi;
 
-    if (slen < plen)
-        return 0;
+  if (slen < plen)
+    return 0;
 
-    for (si=slen, pi=plen; si>=slen - plen; --si, --pi)
-        if (tolower(str[si]) != tolower(pat[pi]))
-            return 0;
+  for (si = slen, pi = plen; si >= slen - plen; --si, --pi)
+    if (tolower (str[si]) != tolower (pat[pi]))
+      return 0;
 
-    return 1;
+  return 1;
 }
 
 /*
  * See if name ends with one of the extensions given in the
  * extensions array.
  */
-static int in_extensions(const char *name)
+static int
+in_extensions (const char *name)
 {
-    int       i;
-    const int extslen = sizeof(extensions)/sizeof(extensions[0]);
+  int i;
+  const int extslen = sizeof (extensions) / sizeof (extensions[0]);
 
-    for (i=0; i<extslen; ++i)
-        if (string_endswidth_ic(name, extensions[i]))
-            return 1;
+  for (i = 0; i < extslen; ++i)
+    if (string_endswidth_ic (name, extensions[i]))
+      return 1;
 
-    return 0;
+  return 0;
 }
 
 #if 0
-static void report(void) {
-    int      i;
-    unsigned long int s = sizeof(struct storage) +
-        sizeof(char*) * storage->capacity;
+static void
+report (void)
+{
+  int i;
+  unsigned long int s = sizeof (struct storage) +
+    sizeof (char *) * storage->capacity;
 
-    for (i=0; i<storage->size; ++i)
-        s+=strlen(storage->data[i]) + 1;
+  for (i = 0; i < storage->size; ++i)
+    s += strlen (storage->data[i]) + 1;
 
-    printf("%10lu bytes in use for %d items\n",
-           sizeof(storage) + s, storage->size);
-    printf("storage capacity: %d\n", storage->capacity);
+  printf ("%10lu bytes in use for %d items\n",
+          sizeof (storage) + s, storage->size);
+  printf ("storage capacity: %d\n", storage->capacity);
 }
 #endif
 
@@ -187,23 +222,25 @@ static void report(void) {
  * the path for the executable and replaces the current process
  * with the player.
  */
-static void playfile(const char *file)
+static void
+playfile (const char *file)
 {
-    int   status;
-    pid_t pid = fork();
+  int status;
+  pid_t pid = fork ();
 
-    switch (pid) {
+  switch (pid)
+    {
     case -1:
-        fprintf(stderr, "can't fork\n");
-        exit(1);
+      fprintf (stderr, "can't fork\n");
+      exit (1);
     case 0:
-        printf("Playing '%s'\n", file);
-        fclose(stdout);
-        fclose(stderr);
-        /* keep open stdin for control */
-        execlp(player, player_args, file, (char*)NULL);
+      printf ("Playing '%s'\n", file);
+      fclose (stdout);
+      fclose (stderr);
+      /* keep open stdin for control */
+      execlp (player, player_args, file, (char *) NULL);
     default:
-        wait(&status);
+      wait (&status);
     }
 }
 
@@ -217,80 +254,88 @@ static void playfile(const char *file)
  * Walk a directory tree from path, recursing(1) or not(0) and
  * adding files to storage for each playable file.
  */
-static int walkdir(char *path, int recurse, struct storage *storage)
+static int
+walkdir (char *path, int recurse, struct storage *storage)
 {
-    struct dirent *de;
+  struct dirent *de;
 #ifdef USE_STAT
-    struct stat    st;
+  struct stat st;
 #endif
-    char           fullname[PATH_MAX];
-    DIR           *dir = opendir(path);
+  char fullname[PATH_MAX];
+  DIR *dir = opendir (path);
 
-    if (dir == NULL)
-        return -1;
+  if (dir == NULL)
+    return -1;
 
-    while ((de = readdir(dir)) != NULL) {
-        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
-            continue;
+  while ((de = readdir (dir)) != NULL)
+    {
+      if (strcmp (de->d_name, ".") == 0
+          || strcmp (de->d_name, "..") == 0)
+        continue;
 
-        snprintf(fullname, PATH_MAX, "%s/%s", path, de->d_name);
+      snprintf (fullname, PATH_MAX, "%s/%s", path, de->d_name);
 
 #ifdef USE_STAT
-        if (lstat(fullname, &st) == -1)
-            continue;
+      if (lstat (fullname, &st) == -1)
+        continue;
 
-        if (recurse && S_ISDIR(st.st_mode))
-            walkdir(fullname, recurse, storage);
+      if (recurse && S_ISDIR (st.st_mode))
+        walkdir (fullname, recurse, storage);
 #else
-        if (recurse && de->d_type == DT_DIR)
-            walkdir(fullname, recurse, storage);
+      if (recurse && de->d_type == DT_DIR)
+        walkdir (fullname, recurse, storage);
 #endif
 
-        if (in_extensions(fullname)) {
-            if (storage_add(storage, fullname) != 0)
-                return -1;
+      if (in_extensions (fullname))
+        {
+          if (storage_add (storage, fullname) != 0)
+            return -1;
         }
     }
 
-    closedir(dir);
-    return 1;
+  closedir (dir);
+  return 1;
 }
 
-int main(int argc, char **argv)
+int
+main (int argc, char **argv)
 {
-    struct storage *storage = storage_new();
-    FILE           *sysrand = fopen(SYSRAND, "rb");
-    int             i;
-    
-    if (storage == NULL) {
-        fprintf(stderr, "can't allocate storage\n");
-        return 1;
+  struct storage *storage = storage_new ();
+  FILE *sysrand = fopen (SYSRAND, "rb");
+  int i;
+
+  if (storage == NULL)
+    {
+      fprintf (stderr, "can't allocate storage\n");
+      return 1;
     }
 
-    if (sysrand) {
-        unsigned int rval;
-        if (fread(&rval, sizeof(rval), 1, sysrand) == 1)
-            srand(rval);
-        else
-            srand(time(NULL));
-        fclose(sysrand);
-    } else {
-        srand(time(NULL));
+  if (sysrand)
+    {
+      unsigned int rval;
+      if (fread (&rval, sizeof (rval), 1, sysrand) == 1)
+        srand (rval);
+      else
+        srand (time (NULL));
+      fclose (sysrand);
+    }
+  else
+    srand (time (NULL));
+
+  if (argc < 2)
+    walkdir (".", 1, storage);
+  else
+    {
+      for (i = 1; i < argc; ++i)
+        walkdir (argv[i], 1, storage);
     }
 
-    if (argc < 2) {
-        walkdir(".", 1, storage);
-    } else {
-        for (i=1; i<argc; ++i)
-            walkdir(argv[i], 1, storage);
-    }
+  /* report(); */
 
-    /* report(); */
+  storage_shuffle (storage);
+  for (i = 0; i < storage->size; ++i)
+    playfile (storage->data[i]);
 
-    storage_shuffle(storage);
-    for (i=0; i<storage->size; ++i)
-        playfile(storage->data[i]);
-
-    storage_free(storage);
-    return 0;
+  storage_free (storage);
+  return 0;
 }
