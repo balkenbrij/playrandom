@@ -38,7 +38,7 @@ static const char * const extensions[] = {
 };
 
 /* The initial storage size */
-#define STORAGE_SIZE 32
+#define STORAGE_SIZE 4096
 
 /*
  * for random seed, if it can't be used the current time
