@@ -28,13 +28,14 @@
 #include <unistd.h>
 
 /* Define media player and it's arguments */
-static const char * const player = "mpv";
+static const char *const player = "mpv";
 #define player_args "-really-quiet", "-fs"
 
 /* and the extensions you want to play */
-static const char * const extensions[] = {
-  ".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
-  ".mpeg", ".flv", ".sfv"
+static const char *const extensions[] =
+{
+	".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
+	".mpeg", ".flv", ".sfv"
 };
 
 /* The initial storage size */
@@ -55,94 +56,101 @@ static const char * const extensions[] = {
  */
 struct storage
 {
-  int size, capacity;
-  char **data;
+	int    size, capacity;
+	char **data;
 };
 
 /*
  * Initialize storage.
  */
-static struct storage *
-storage_new (void)
+static struct storage *storage_new(void)
 {
-  struct storage *s = malloc (sizeof (struct storage));
+	struct storage *s = malloc(sizeof(struct storage));
 
-  if (s == NULL)
-    return NULL;
+	if (s == NULL)
+	{
+		return NULL;
+	}
 
-  s->data = malloc (sizeof (char *) * STORAGE_SIZE);
-  if (s->data == NULL)
-    {
-      free (s);
-      return NULL;
-    }
+	s->data = malloc(sizeof(char *) * STORAGE_SIZE);
+	if (s->data == NULL)
+	{
+		free(s);
+		return NULL;
+	}
 
-  s->size = 0;
-  s->capacity = STORAGE_SIZE;
+	s->size = 0;
+	s->capacity = STORAGE_SIZE;
 
-  return s;
+	return s;
 }
 
 /*
  * Adds a string to storage and if it doesn't fit allocates
  * more memory.
  */
-static int
-storage_add (struct storage *s, const char *string)
+static int storage_add(struct storage *s, const char *string)
 {
-  if (s == NULL || string == NULL)
-    return -1;
+	if (s == NULL || string == NULL)
+	{
+		return -1;
+	}
 
-  /* If we're at capacity increase it by doubling it */
-  if (s->size == s->capacity)
-    {
-      int newcap = s->capacity << 1;
-      char **tmpdata;
+	/* If we're at capacity increase it by doubling it */
+	if (s->size == s->capacity)
+	{
+		int newcap = s->capacity << 1;
+		char **tmpdata;
 
-      if (newcap < s->capacity)
-        return -1;
+		if (newcap < s->capacity)
+		{
+			return -1;
+		}
 
-      tmpdata = realloc (s->data, sizeof (char *) * newcap);
+		tmpdata = realloc(s->data, sizeof(char *) * newcap);
 
-      if (tmpdata == NULL)
-        return -1;
+		if (tmpdata == NULL)
+		{
+			return -1;
+		}
 
-      s->data = tmpdata;
-      s->capacity = newcap;
-    }
+		s->data = tmpdata;
+		s->capacity = newcap;
+	}
 
-  /* add the string */
-  s->data[s->size] = malloc (strlen (string) + 1);
-  if (s->data[s->size] == NULL)
-    return -1;
+	/* add the string */
+	s->data[s->size] = malloc(strlen(string) + 1);
+	if (s->data[s->size] == NULL)
+	{
+		return -1;
+	}
 
-  strcpy (s->data[s->size], string);
-  ++s->size;
+	strcpy(s->data[s->size], string);
+	++s->size;
 
-  return 0;
+	return 0;
 }
 
 /*
  * Shuffle the storage
  */
-static void
-storage_shuffle (struct storage *s)
+static void storage_shuffle(struct storage *s)
 {
-  int i, r;
-  char *tmp;
+	int   i, r;
+	char *tmp;
 
-  for (i = 0; i < s->size; ++i)
-    {
-      do
-        {
-          r = rand () % s->size;
-        }
-      while (r == i);
+	for (i = 0; i < s->size; ++i)
+	{
+		do
+		{
+			r = rand() % s->size;
+		}
+		while (r == i);
 
-      tmp = s->data[i];
-      s->data[i] = s->data[r];
-      s->data[r] = tmp;
-    }
+		tmp = s->data[i];
+		s->data[i] = s->data[r];
+		s->data[r] = tmp;
+	}
 }
 
 /*
@@ -151,16 +159,17 @@ storage_shuffle (struct storage *s)
  * - the memory for holding all string pointers and
  * - the storage struct itself.
  */
-static void
-storage_free (struct storage *s)
+static void storage_free(struct storage *s)
 {
-  int i;
+	int i;
 
-  for (i = 0; i < s->size; ++i)
-    free (s->data[i]);
+	for (i = 0; i < s->size; ++i)
+	{
+		free(s->data[i]);
+	}
 
-  free (s->data);
-  free (s);
+	free(s->data);
+	free(s);
 }
 
 /*
@@ -168,35 +177,41 @@ storage_free (struct storage *s)
  * case.
  */
 static int
-string_endswidth_ic (const char * const str, const char * const pat)
+string_endswidth_ic(const char *const str, const char *const pat)
 {
-  int slen = strlen (str), plen = strlen (pat), si, pi;
+	int slen = strlen(str), plen = strlen(pat), si, pi;
 
-  if (slen < plen)
-    return 0;
+	if (slen < plen)
+	{
+		return 0;
+	}
 
-  for (si = slen, pi = plen; si >= slen - plen; --si, --pi)
-    if (tolower (str[si]) != tolower (pat[pi]))
-      return 0;
+	for (si = slen, pi = plen; si >= slen - plen; --si, --pi)
+	{
+		if (tolower(str[si]) != tolower(pat[pi])) return 0;
+	}
 
-  return 1;
+	return 1;
 }
 
 /*
  * See if name ends with one of the extensions given in the
  * extensions array.
  */
-static int
-in_extensions (const char * const name)
+static int in_extensions(const char *const name)
 {
-  int i;
-  const int extslen = sizeof (extensions) / sizeof (extensions[0]);
+	const int extslen = sizeof(extensions) / sizeof(extensions[0]);
+	int       i;
 
-  for (i = 0; i < extslen; ++i)
-    if (string_endswidth_ic (name, extensions[i]))
-      return 1;
+	for (i = 0; i < extslen; ++i)
+	{
+		if (string_endswidth_ic(name, extensions[i]))
+		{
+			return 1;
+		}
+	}
 
-  return 0;
+	return 0;
 }
 
 
@@ -205,26 +220,27 @@ in_extensions (const char * const name)
  * the path for the executable and replaces the current process
  * with the player.
  */
-static void
-playfile (const char * const file)
+static void playfile(const char *const file)
 {
-  int status;
-  pid_t pid = fork ();
+	int status;
+	pid_t pid = fork();
 
-  switch (pid)
-    {
-    case -1:
-      perror("can't fork");
-      exit (1);
-    case 0:
-      printf ("Playing '%s'\n", file);
-      fclose (stdout);
-      fclose (stderr);
-      /* keep open stdin for control */
-      execlp (player, player_args, file, (char *) NULL);
-    default:
-      wait (&status);
-    }
+	switch (pid)
+	{
+	case -1:
+		perror("can't fork");
+		exit(1);
+
+	case 0:
+		printf("Playing '%s'\n", file);
+		fclose(stdout);
+		fclose(stderr);
+		/* keep open stdin for control */
+		execlp(player, player_args, file, (char *) NULL);
+
+	default:
+		wait(&status);
+	}
 }
 
 /* Maximum path length, should already be defined by system */
@@ -238,81 +254,111 @@ playfile (const char * const file)
  * adding files to storage for each playable file.
  */
 static int
-walkdir (const char * const path, int recurse, struct storage *storage)
+walkdir(const char *const path, int recurse, struct storage *storage)
 {
-  struct dirent *de;
+	struct dirent *de;
 #ifdef USE_STAT
-  struct stat st;
+	struct stat st;
 #endif
-  char fullname[PATH_MAX];
-  DIR *dir = opendir (path);
+	char fullname[PATH_MAX];
+	DIR *dir = opendir(path);
 
-  if (dir == NULL)
-    return -1;
+	if (dir == NULL)
+	{
+		return -1;
+	}
 
-  while ((de = readdir (dir)) != NULL)
-    {
-      if (strcmp (de->d_name, ".") == 0
-          || strcmp (de->d_name, "..") == 0)
-        continue;
+	while ((de = readdir(dir)) != NULL)
+	{
+		if (strcmp(de->d_name, ".") == 0
+		    || strcmp(de->d_name, "..") == 0)
+		{
+			continue;
+		}
 
-      snprintf (fullname, PATH_MAX, "%s/%s", path, de->d_name);
+		snprintf(fullname, PATH_MAX, "%s/%s", path, de->d_name);
 
 #ifdef USE_STAT
-      if (lstat (fullname, &st) == -1)
-        continue;
+		if (lstat(fullname, &st) == -1)
+		{
+			continue;
+		}
 
-      if (recurse && S_ISDIR (st.st_mode))
-        walkdir (fullname, recurse, storage);
+		if (recurse && S_ISDIR(st.st_mode))
+		{
+			walkdir(fullname, recurse, storage);
+		}
 #else
-      if (recurse && de->d_type == DT_DIR)
-        walkdir (fullname, recurse, storage);
+		if (recurse && de->d_type == DT_DIR)
+		{
+			walkdir(fullname, recurse, storage);
+		}
 #endif
 
-      if (in_extensions (fullname))
-        if (storage_add (storage, fullname) != 0)
-          return -1;
-    }
+		if (in_extensions(fullname))
+		{
+			if (storage_add(storage, fullname) != 0)
+			{
+				return -1;
+			}
+		}
+	}
 
-  closedir (dir);
-  return 1;
+	closedir(dir);
+	return 1;
 }
 
-int
-main (int argc, char **argv)
+int main(int argc, char **argv)
 {
-  struct storage *storage = storage_new ();
-  FILE *sysrand = fopen (SYSRAND, "rb");
-  int i;
+	struct storage *storage = storage_new();
+	FILE *sysrand = fopen(SYSRAND, "rb");
+	int i;
 
-  if (storage == NULL)
-    {
-      fprintf (stderr, "can't allocate storage memory\n");
-      return 1;
-    }
+	if (storage == NULL)
+	{
+		fprintf(stderr, "can't allocate storage memory\n");
+		return 1;
+	}
 
-  if (sysrand)
-    {
-      unsigned int rval;
-      if (fread (&rval, sizeof (rval), 1, sysrand) == 1)
-        srand (rval);
-      else
-        srand (time (NULL));
-      fclose (sysrand);
-    }
-  else
-    srand (time (NULL));
+	if (sysrand)
+	{
+		unsigned int rval;
 
-  if (argc < 2)
-    walkdir (".", 1, storage);
-  else
-    for (i = 1; i < argc; ++i)
-      walkdir (argv[i], 1, storage);
+		if (fread(&rval, sizeof(rval), 1, sysrand) == 1)
+		{
+			srand(rval);
+		}
 
-  storage_shuffle (storage);
-  for (i = 0; i < storage->size; ++i)
-    playfile (storage->data[i]);
+		else
+		{
+			srand(time(NULL));
+		}
 
-  storage_free (storage);
-  return 0;
+		fclose(sysrand);
+	}
+
+	else
+	{
+		srand(time(NULL));
+	}
+
+	if (argc < 2)
+	{
+		walkdir(".", 1, storage);
+	}
+
+	else for (i = 1; i < argc; ++i)
+	{
+		walkdir(argv[i], 1, storage);
+	}
+
+	storage_shuffle(storage);
+	for (i = 0; i < storage->size; ++i)
+	{
+		playfile(storage->data[i]);
+	}
+
+	storage_free(storage);
+	return 0;
 }
+
