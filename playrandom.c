@@ -188,7 +188,10 @@ string_endswidth_ic(const char *const str, const char *const pat)
 
 	for (si = slen, pi = plen; si >= slen - plen; --si, --pi)
 	{
-		if (tolower(str[si]) != tolower(pat[pi])) return 0;
+		if (tolower(str[si]) != tolower(pat[pi]))
+		{
+			return 0;
+		}
 	}
 
 	return 1;
