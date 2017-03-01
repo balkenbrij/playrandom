@@ -27,6 +27,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#ifdef __linux__
+#include <bsd/stdlib.h>
+#endif
+
 /* Define media player and it's arguments */
 static const char *const player = "mpv";
 #define player_args "-really-quiet", "-fs"
@@ -40,12 +44,6 @@ static const char *const extensions[] =
 
 /* The initial storage size */
 #define STORAGE_SIZE 4096
-
-/*
- * for random seed, if it can't be used the current time
- * is used.
- */
-#define SYSRAND "/dev/urandom"
 
 /*
  * Storage is like the C++ vector<string>; it has a size which
@@ -68,9 +66,7 @@ static struct storage *storage_new(void)
 	struct storage *s = malloc(sizeof(struct storage));
 
 	if (s == NULL)
-	{
 		return NULL;
-	}
 
 	s->data = malloc(sizeof(char *) * STORAGE_SIZE);
 	if (s->data == NULL)
@@ -92,9 +88,7 @@ static struct storage *storage_new(void)
 static int storage_add(struct storage *s, const char *string)
 {
 	if (s == NULL || string == NULL)
-	{
 		return -1;
-	}
 
 	/* If we're at capacity increase it by doubling it */
 	if (s->size == s->capacity)
@@ -103,16 +97,13 @@ static int storage_add(struct storage *s, const char *string)
 		char **tmpdata;
 
 		if (newcap < s->capacity)
-		{
 			return -1;
-		}
 
-		tmpdata = realloc(s->data, sizeof(char *) * newcap);
+		tmpdata = reallocarray(s->data, newcap,
+		                       sizeof(char *));
 
 		if (tmpdata == NULL)
-		{
 			return -1;
-		}
 
 		s->data = tmpdata;
 		s->capacity = newcap;
@@ -121,9 +112,7 @@ static int storage_add(struct storage *s, const char *string)
 	/* add the string */
 	s->data[s->size] = malloc(strlen(string) + 1);
 	if (s->data[s->size] == NULL)
-	{
 		return -1;
-	}
 
 	strcpy(s->data[s->size], string);
 	++s->size;
@@ -141,12 +130,7 @@ static void storage_shuffle(struct storage *s)
 
 	for (i = 0; i < s->size; ++i)
 	{
-		do
-		{
-			r = rand() % s->size;
-		}
-		while (r == i);
-
+		r = arc4random() % s->size;
 		tmp = s->data[i];
 		s->data[i] = s->data[r];
 		s->data[r] = tmp;
@@ -182,17 +166,11 @@ string_endswidth_ic(const char *const str, const char *const pat)
 	int slen = strlen(str), plen = strlen(pat), si, pi;
 
 	if (slen < plen)
-	{
 		return 0;
-	}
 
 	for (si = slen, pi = plen; si >= slen - plen; --si, --pi)
-	{
 		if (tolower(str[si]) != tolower(pat[pi]))
-		{
 			return 0;
-		}
-	}
 
 	return 1;
 }
@@ -207,12 +185,8 @@ static int in_extensions(const char *const name)
 	int       i;
 
 	for (i = 0; i < extslen; ++i)
-	{
 		if (string_endswidth_ic(name, extensions[i]))
-		{
 			return 1;
-		}
-	}
 
 	return 0;
 }
@@ -250,7 +224,7 @@ static void playfile(const char *const file)
 /* #define PATH_MAX 1024 */
 
 /* If you can't use D_DIR from dirent, stat files instead */
-/* #define USE_STAT */
+#define USE_STAT
 
 /*
  * Walk a directory tree from path, recursing(1) or not(0) and
@@ -267,44 +241,30 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 	DIR *dir = opendir(path);
 
 	if (dir == NULL)
-	{
 		return -1;
-	}
 
 	while ((de = readdir(dir)) != NULL)
 	{
 		if (strcmp(de->d_name, ".") == 0
 		    || strcmp(de->d_name, "..") == 0)
-		{
 			continue;
-		}
 
 		snprintf(fullname, PATH_MAX, "%s/%s", path, de->d_name);
 
 #ifdef USE_STAT
 		if (lstat(fullname, &st) == -1)
-		{
 			continue;
-		}
 
 		if (recurse && S_ISDIR(st.st_mode))
-		{
 			walkdir(fullname, recurse, storage);
-		}
 #else
 		if (recurse && de->d_type == DT_DIR)
-		{
 			walkdir(fullname, recurse, storage);
-		}
 #endif
 
 		if (in_extensions(fullname))
-		{
 			if (storage_add(storage, fullname) != 0)
-			{
 				return -1;
-			}
-		}
 	}
 
 	closedir(dir);
@@ -314,35 +274,13 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 int main(int argc, char **argv)
 {
 	struct storage *storage = storage_new();
-	FILE *sysrand = fopen(SYSRAND, "rb");
+	char FnClean[PATH_MAX];
 	int i;
 
 	if (storage == NULL)
 	{
 		fprintf(stderr, "can't allocate storage memory\n");
 		return 1;
-	}
-
-	if (sysrand)
-	{
-		unsigned int rval;
-
-		if (fread(&rval, sizeof(rval), 1, sysrand) == 1)
-		{
-			srand(rval);
-		}
-
-		else
-		{
-			srand(time(NULL));
-		}
-
-		fclose(sysrand);
-	}
-
-	else
-	{
-		srand(time(NULL));
 	}
 
 	if (argc < 2)
@@ -352,7 +290,11 @@ int main(int argc, char **argv)
 
 	else for (i = 1; i < argc; ++i)
 	{
-		walkdir(argv[i], 1, storage);
+		int slen = strlen(argv[i]);
+		strcpy(FnClean, argv[i]);
+		if (FnClean[slen-1] == '/')
+			FnClean[slen-1] = '\0';	
+		walkdir(FnClean, 1, storage);
 	}
 
 	storage_shuffle(storage);

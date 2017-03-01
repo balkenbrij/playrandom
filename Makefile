@@ -1,14 +1,19 @@
 ####### Compiler, tools and options
 
 CC	?=	gcc
+CXX ?=  g++
 ifeq ($(CC),)
 CC	:=	gcc
 endif
+ifeq ($(CXX),)
+CC	:=	g++
+endif
 INCPATH :=	.
-CFLAGS	?=	-O2
+CFLAGS	?=	-O2 -pipe -fstrict-aliasing -fstrict-overflow
 CFLAGS	:=	$(CFLAGS) -Wall -Wextra -pedantic -DNO_DEBUG
-LDLIBS	:=	
+LDLIBS	:=	-lbsd
 LDFLAGS	:=	
+CXXFLAGS:= $(CFLAGS)
 
 INSTALL_PATH :=	/usr/local/bin
 
@@ -21,7 +26,8 @@ OBJECTS :=	playrandom.o
 
 ####### Implicit rules
 
-.SUFFIXES: .c
+.cc.o:
+	$(CXX) -c $(CXXFLAGS) $(FILESIZE_DEFS) -I$(INCPATH) -o $@ $<
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(FILESIZE_DEFS) -I$(INCPATH) -o $@ $<
@@ -31,13 +37,13 @@ OBJECTS :=	playrandom.o
 all: $(BINARY)
 
 $(BINARY): $(OBJECTS)
-	$(CC) $(LDFLAGS) -o $(BINARY) $(OBJECTS) $(LDLIBS)
-	strip -s $(BINARY)
+	$(CXX) $(LDFLAGS) -o $(BINARY) $(OBJECTS) $(LDLIBS)
+	strip -s -R .note -R .comment --strip-unneeded $(BINARY)
 	size $(BINARY)
 
 clean:
 	-rm -f core *.o
-#	-rm -f $(BINARY)
+	-rm -f $(BINARY)
 
 install:
 	cp $(BINARY) $(INSTALL_PATH)
