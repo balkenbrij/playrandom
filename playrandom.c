@@ -244,8 +244,13 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 		    || strcmp(de->d_name, "..") == 0)
 			continue;
 
-		snprintf(fullname, PATH_MAX-1, "%s/%s",
-		         path, de->d_name);
+		if (path[strlen(path)-1] == '/')
+			snprintf(fullname, PATH_MAX-1, "%s%s",
+			         path, de->d_name);
+
+		else
+			snprintf(fullname, PATH_MAX-1, "%s/%s",
+			         path, de->d_name);
 #ifdef USE_STAT
 		if (lstat(fullname, &st) == -1)
 			continue;
