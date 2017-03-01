@@ -216,15 +216,6 @@ playfile(const char *const file)
 	}
 }
 
-void
-strip_ending_slashes(char *str)
-{
-	int i;
-
-	for (i = strlen(str) - 1; i >= 0 && str[i] == '/'; --i)
-		str[i] = '\0';
-}
-
 /* Maximum path length, should already be defined by system */
 /* #define PATH_MAX 1024 */
 
@@ -253,11 +244,8 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 		    || strcmp(de->d_name, "..") == 0)
 			continue;
 
-		strcpy(fullname, path);
-		strip_ending_slashes(fullname);
-		strcat(fullname, "/");
-		strcat(fullname, de->d_name);
-
+		snprintf(fullname, PATH_MAX-1, "%s/%s",
+		         path, de->d_name);
 #ifdef USE_STAT
 		if (lstat(fullname, &st) == -1)
 			continue;
@@ -278,22 +266,37 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 	return 1;
 }
 
+void
+strip_ending_slashes(char *str)
+{
+	size_t i;
+
+	/* stop before we delete all (in case of '/') */
+	for (i = strlen(str) - 1; i && str[i] == '/'; --i)
+		str[i] = '\0';
+}
+
 int
 main(int argc, char **argv)
 {
 	struct storage *storage = storage_new();
 	size_t i;
+	char   dirname[PATH_MAX];
 
 	if (storage == NULL) {
 		fprintf(stderr, "can't allocate storage memory\n");
 		return 1;
 	}
 
-	if (argc < 2)
+	if (argc < 2) {
 		walkdir(".", 1, storage);
+	}
 
-	else for (i = 1; i < (size_t)argc; ++i)
-		walkdir(argv[i], 1, storage);
+	else for (i = 1; i < (size_t)argc; ++i) {
+		strcpy(dirname, argv[i]);
+		strip_ending_slashes(dirname);
+		walkdir(dirname, 1, storage);
+	}
 
 	storage_shuffle(storage);
 	for (i = 0; i < storage->size; ++i) 
