@@ -36,8 +36,8 @@ static const char *const player = "mpv";
 #define player_args "-really-quiet", "-fs"
 
 /* and the extensions you want to play */
-static const char *const extensions[] =
-{
+static const char* const
+extensions[] = {
 	".mp4", ".mkv", ".webm", ".m4v", ".wmv", ".avi", ".mpg",
 	".mpeg", ".flv", ".sfv"
 };
@@ -52,16 +52,16 @@ static const char *const extensions[] =
  * When we run out of room we realloc 2*capacity more room for
  * performance.
  */
-struct storage
-{
-	int    size, capacity;
-	char **data;
+struct storage {
+	size_t size, capacity;
+	char   **data;
 };
 
 /*
  * Initialize storage.
  */
-static struct storage *storage_new(void)
+static struct storage*
+storage_new(void)
 {
 	struct storage *s = malloc(sizeof(struct storage));
 
@@ -69,8 +69,7 @@ static struct storage *storage_new(void)
 		return NULL;
 
 	s->data = malloc(sizeof(char *) * STORAGE_SIZE);
-	if (s->data == NULL)
-	{
+	if (s->data == NULL) {
 		free(s);
 		return NULL;
 	}
@@ -85,19 +84,16 @@ static struct storage *storage_new(void)
  * Adds a string to storage and if it doesn't fit allocates
  * more memory.
  */
-static int storage_add(struct storage *s, const char *string)
+static int
+storage_add(struct storage *s, const char *string)
 {
 	if (s == NULL || string == NULL)
 		return -1;
 
 	/* If we're at capacity increase it by doubling it */
-	if (s->size == s->capacity)
-	{
-		int newcap = s->capacity << 1;
+	if (s->size == s->capacity) {
+		size_t newcap = s->capacity << 1;
 		char **tmpdata;
-
-		if (newcap < s->capacity)
-			return -1;
 
 		tmpdata = reallocarray(s->data, newcap,
 		                       sizeof(char *));
@@ -123,13 +119,13 @@ static int storage_add(struct storage *s, const char *string)
 /*
  * Shuffle the storage
  */
-static void storage_shuffle(struct storage *s)
+static void
+storage_shuffle(struct storage *s)
 {
-	int   i, r;
+	size_t i, r;
 	char *tmp;
 
-	for (i = 0; i < s->size; ++i)
-	{
+	for (i = 0; i < s->size; ++i) {
 		r = arc4random() % s->size;
 		tmp = s->data[i];
 		s->data[i] = s->data[r];
@@ -143,14 +139,13 @@ static void storage_shuffle(struct storage *s)
  * - the memory for holding all string pointers and
  * - the storage struct itself.
  */
-static void storage_free(struct storage *s)
+static void
+storage_free(struct storage *s)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < s->size; ++i)
-	{
 		free(s->data[i]);
-	}
 
 	free(s->data);
 	free(s);
@@ -163,7 +158,7 @@ static void storage_free(struct storage *s)
 static int
 string_endswidth_ic(const char *const str, const char *const pat)
 {
-	int slen = strlen(str), plen = strlen(pat), si, pi;
+	size_t slen = strlen(str), plen = strlen(pat), si, pi;
 
 	if (slen < plen)
 		return 0;
@@ -179,10 +174,11 @@ string_endswidth_ic(const char *const str, const char *const pat)
  * See if name ends with one of the extensions given in the
  * extensions array.
  */
-static int in_extensions(const char *const name)
+static int
+in_extensions(const char *const name)
 {
-	const int extslen = sizeof(extensions) / sizeof(extensions[0]);
-	int       i;
+	const size_t extslen = sizeof(extensions)/sizeof(extensions[0]);
+	size_t i;
 
 	for (i = 0; i < extslen; ++i)
 		if (string_endswidth_ic(name, extensions[i]))
@@ -197,22 +193,22 @@ static int in_extensions(const char *const name)
  * the path for the executable and replaces the current process
  * with the player.
  */
-static void playfile(const char *const file)
+static void
+playfile(const char *const file)
 {
 	int status;
 	pid_t pid = fork();
 
-	switch (pid)
-	{
+	switch (pid) {
 	case -1:
 		perror("can't fork");
 		exit(1);
 
 	case 0:
 		printf("Playing '%s'\n", file);
+		fclose(stdin);
 		fclose(stdout);
 		fclose(stderr);
-		/* keep open stdin for control */
 		execlp(player, player_args, file, (char *) NULL);
 
 	default:
@@ -243,8 +239,7 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 	if (dir == NULL)
 		return -1;
 
-	while ((de = readdir(dir)) != NULL)
-	{
+	while ((de = readdir(dir)) != NULL) {
 		if (strcmp(de->d_name, ".") == 0
 		    || strcmp(de->d_name, "..") == 0)
 			continue;
@@ -271,26 +266,24 @@ walkdir(const char *const path, int recurse, struct storage *storage)
 	return 1;
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	struct storage *storage = storage_new();
-	char FnClean[PATH_MAX];
-	int i;
+	char   FnClean[PATH_MAX];
+	size_t i;
 
-	if (storage == NULL)
-	{
+	if (storage == NULL) {
 		fprintf(stderr, "can't allocate storage memory\n");
 		return 1;
 	}
 
-	if (argc < 2)
-	{
+	if (argc < 2) {
 		walkdir(".", 1, storage);
 	}
 
-	else for (i = 1; i < argc; ++i)
-	{
-		int slen = strlen(argv[i]);
+	else for (i = 1; i < (size_t)argc; ++i) {
+		size_t slen = strlen(argv[i]);
 		strcpy(FnClean, argv[i]);
 		if (FnClean[slen-1] == '/')
 			FnClean[slen-1] = '\0';	
@@ -298,8 +291,7 @@ int main(int argc, char **argv)
 	}
 
 	storage_shuffle(storage);
-	for (i = 0; i < storage->size; ++i)
-	{
+	for (i = 0; i < storage->size; ++i) {
 		playfile(storage->data[i]);
 	}
 
