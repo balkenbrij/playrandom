@@ -37,7 +37,7 @@ OBJECTS :=	playrandom.o
 all: $(BINARY)
 
 $(BINARY): $(OBJECTS)
-	$(CXX) $(LDFLAGS) -o $(BINARY) $(OBJECTS) $(LDLIBS)
+	$(CC) $(LDFLAGS) -o $(BINARY) $(OBJECTS) $(LDLIBS)
 	strip -s -R .note -R .comment --strip-unneeded $(BINARY)
 	size $(BINARY)
 
