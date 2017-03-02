@@ -11,7 +11,9 @@ endif
 INCPATH :=	.
 CFLAGS	?=	-O2 -pipe -fstrict-aliasing -fstrict-overflow
 CFLAGS	:=	$(CFLAGS) -Wall -Wextra -pedantic -DNO_DEBUG
+ifeq ($(shell uname),Linux)
 LDLIBS	:=	-lbsd
+endif
 LDFLAGS	:=	
 CXXFLAGS:= $(CFLAGS)
 
